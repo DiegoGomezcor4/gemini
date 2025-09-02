@@ -52,9 +52,14 @@
 
         <!-- Contenido principal de la aplicación (oculto por defecto) -->
         <div id="mainApp" class="hidden">
-            <!-- ID de usuario para demostración de multi-usuario -->
-            <div class="text-center text-sm text-gray-400 mb-6">
-                Tu ID de usuario: <span id="userIdDisplay" class="font-mono bg-gray-100 px-2 py-1 rounded-md">Cargando...</span>
+            <!-- ID de usuario y botón de cerrar sesión -->
+            <div class="flex justify-between items-center mb-6">
+                <div class="text-center text-sm text-gray-400">
+                    Tu ID de usuario: <span id="userIdDisplay" class="font-mono bg-gray-100 px-2 py-1 rounded-md">Cargando...</span>
+                </div>
+                <button id="signOutButton" class="bg-gray-200 text-gray-800 text-sm font-semibold py-1 px-3 rounded-md shadow-sm hover:bg-gray-300 transition duration-200">
+                    Cerrar Sesión
+                </button>
             </div>
 
             <!-- Formulario para agregar un nuevo producto -->
@@ -96,7 +101,7 @@
     <!-- Scripts de Firebase y lógica de la aplicación -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, onSnapshot, collection, query, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
@@ -124,6 +129,7 @@
         const signInButton = document.getElementById('signInButton');
         const signUpButton = document.getElementById('signUpButton');
         const errorMessage = document.getElementById('errorMessage');
+        const signOutButton = document.getElementById('signOutButton');
 
         // Inicializar Firebase
         async function initializeFirebase() {
@@ -194,6 +200,15 @@
                 if (error.code === 'auth/invalid-credential') {
                     errorMessage.textContent = 'Credenciales inválidas.';
                 }
+            }
+        });
+
+        // Manejar el cierre de sesión
+        signOutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
             }
         });
 
@@ -315,3 +330,4 @@
     </script>
 </body>
 </html>
+
