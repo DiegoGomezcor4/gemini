@@ -234,7 +234,7 @@
                 return;
             }
             // Ruta de la colección de productos. Usamos la ruta privada para cada usuario.
-            const productsCollectionPath = `/artifacts/${appId}/users/${currentUserId}/products`;
+            const productsCollectionPath = `artifacts/${appId}/users/${currentUserId}/products`;
             const q = query(collection(db, productsCollectionPath));
             
             // onSnapshot escucha los cambios en tiempo real
@@ -294,7 +294,7 @@
             }
 
             try {
-                const productsRef = collection(db, `/artifacts/${appId}/users/${userId}/products`);
+                const productsRef = collection(db, `artifacts/${appId}/users/${userId}/products`);
                 await addDoc(productsRef, {
                     name: name,
                     sku: sku,
@@ -323,7 +323,7 @@
             }
             
             try {
-                const productDocRef = doc(db, `/artifacts/${appId}/users/${userId}/products`, id);
+                const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/products`, id);
                 
                 if (action === 'delete') {
                     // Deshabilitar los botones inmediatamente para evitar clicks accidentales
