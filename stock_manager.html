@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Stock SaaS</title>
+    <!-- Incluir Tailwind CSS desde CDN para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Contenedor principal de la aplicación -->
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-10 border border-gray-200">
+        <!-- Título de la aplicación -->
+        <h1 class="text-3xl sm:text-4xl font-bold text-center text-blue-700 mb-2">
+            Gestión de Stock SaaS
+        </h1>
+        <p class="text-center text-gray-500 mb-6">
+            Añade y gestiona tus productos en tiempo real.
+        </p>
+
+        <!-- Contenedor de Autenticación -->
+        <div id="authContainer" class="max-w-md mx-auto hidden">
+            <h2 class="text-xl sm:text-2xl font-semibold mb-4 text-gray-700 text-center">Inicia Sesión o Regístrate</h2>
+            <form id="authForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <input type="email" id="email" placeholder="tu-correo@ejemplo.com" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                    <button type="button" id="signUpButton" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-blue-700 transition duration-200 ease-in-out">
+                        Registrarse
+                    </button>
+                    <button type="button" id="signInButton" class="w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-md shadow-md hover:bg-gray-300 transition duration-200 ease-in-out">
+                        Iniciar Sesión
+                    </button>
+                </div>
+                <p id="errorMessage" class="text-red-500 text-sm text-center mt-2"></p>
+            </form>
+        </div>
+
+        <!-- Contenido principal de la aplicación (oculto por defecto) -->
+        <div id="mainApp" class="hidden">
+            <!-- ID de usuario para demostración de multi-usuario -->
+            <div class="text-center text-sm text-gray-400 mb-6">
+                Tu ID de usuario: <span id="userIdDisplay" class="font-mono bg-gray-100 px-2 py-1 rounded-md">Cargando...</span>
+            </div>
+
+            <!-- Formulario para agregar un nuevo producto -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-200">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-4 text-gray-700">Añadir Nuevo Producto</h2>
+                <form id="productForm" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                    <div class="col-span-1">
+                        <label for="productName" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                        <input type="text" id="productName" placeholder="Ej. Camiseta" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="productSku" class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                        <input type="text" id="productSku" placeholder="Ej. CAM-001" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="productStock" class="block text-sm font-medium text-gray-700 mb-1">Stock Inicial</label>
+                        <input type="number" id="productStock" value="0" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1 sm:col-span-3">
+                        <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-blue-700 transition duration-200 ease-in-out">
+                            Añadir Producto
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lista de productos -->
+            <div>
+                <h2 class="text-xl sm:text-2xl font-semibold mb-4 text-gray-700">Productos en Stock</h2>
+                <div id="productList" class="space-y-4">
+                    <!-- Los productos se cargarán aquí dinámicamente -->
+                </div>
+                <p id="noProductsMessage" class="text-gray-400 text-center mt-8 hidden">No hay productos. ¡Añade uno para empezar!</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts de Firebase y lógica de la aplicación -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, onSnapshot, collection, query, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Configuración y variables globales proporcionadas por el entorno
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app;
+        let auth;
+        let db;
+        let userId;
+
+        // Elementos del DOM
+        const productForm = document.getElementById('productForm');
+        const productList = document.getElementById('productList');
+        const noProductsMessage = document.getElementById('noProductsMessage');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+
+        // Elementos de Autenticación
+        const authContainer = document.getElementById('authContainer');
+        const mainApp = document.getElementById('mainApp');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const signInButton = document.getElementById('signInButton');
+        const signUpButton = document.getElementById('signUpButton');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Inicializar Firebase
+        async function initializeFirebase() {
+            try {
+                // Habilitar logging de depuración de Firestore
+                setLogLevel('debug');
+                
+                // Inicializar la aplicación Firebase
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Autenticar al usuario
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplay.textContent = userId;
+                        authContainer.classList.add('hidden'); // Ocultar el formulario de auth
+                        mainApp.classList.remove('hidden');    // Mostrar el contenido principal
+                        setupRealtimeListener(userId);
+                    } else {
+                        userId = null;
+                        authContainer.classList.remove('hidden'); // Mostrar el formulario de auth
+                        mainApp.classList.add('hidden');          // Ocultar el contenido principal
+                    }
+                });
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+            } catch (error) {
+                console.error("Error al inicializar Firebase o al autenticar:", error);
+                userIdDisplay.textContent = 'Error';
+            }
+        }
+
+        // Manejar el registro de usuario
+        signUpButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            errorMessage.textContent = '';
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Error al registrarse:", error);
+                errorMessage.textContent = 'Error al registrarse. Inténtalo de nuevo.';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage.textContent = 'El correo ya está en uso.';
+                }
+            }
+        });
+
+        // Manejar el inicio de sesión
+        signInButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            errorMessage.textContent = '';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Error al iniciar sesión:", error);
+                errorMessage.textContent = 'Error al iniciar sesión. Comprueba tu correo y contraseña.';
+                if (error.code === 'auth/invalid-credential') {
+                    errorMessage.textContent = 'Credenciales inválidas.';
+                }
+            }
+        });
+
+        // Configurar el listener de Firestore para cambios en tiempo real
+        function setupRealtimeListener(currentUserId) {
+            if (!db || !currentUserId) {
+                console.error("Firestore o ID de usuario no están listos.");
+                return;
+            }
+            // Ruta de la colección de productos. Usamos la ruta privada para cada usuario.
+            const productsCollectionPath = `/artifacts/${appId}/users/${currentUserId}/products`;
+            const q = query(collection(db, productsCollectionPath));
+            
+            // onSnapshot escucha los cambios en tiempo real
+            onSnapshot(q, (querySnapshot) => {
+                productList.innerHTML = ''; // Limpiar la lista existente
+                let hasProducts = false;
+
+                querySnapshot.forEach((doc) => {
+                    hasProducts = true;
+                    const product = { id: doc.id, ...doc.data() };
+                    renderProduct(product);
+                });
+
+                // Mostrar u ocultar el mensaje de "no hay productos"
+                if (hasProducts) {
+                    noProductsMessage.classList.add('hidden');
+                } else {
+                    noProductsMessage.classList.remove('hidden');
+                }
+            }, (error) => {
+                console.error("Error al escuchar los cambios en Firestore:", error);
+                // Aquí puedes mostrar un mensaje de error al usuario
+            });
+        }
+
+        // Renderizar un producto en el DOM
+        function renderProduct(product) {
+            const productElement = document.createElement('div');
+            productElement.className = "bg-white rounded-lg p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between border border-gray-200 hover:shadow-md transition duration-200 ease-in-out";
+            productElement.innerHTML = `
+                <div class="flex-grow mb-4 sm:mb-0">
+                    <p class="font-semibold text-gray-800 text-lg">${product.name}</p>
+                    <p class="text-sm text-gray-500">SKU: ${product.sku}</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <p class="font-bold text-gray-900 text-2xl">Stock: ${product.stock}</p>
+                    <button data-id="${product.id}" data-action="decrement" class="px-3 py-1 bg-red-500 text-white rounded-md shadow-sm hover:bg-red-600 transition duration-200">-</button>
+                    <button data-id="${product.id}" data-action="increment" class="px-3 py-1 bg-green-500 text-white rounded-md shadow-sm hover:bg-green-600 transition duration-200">+</button>
+                </div>
+            `;
+            productList.appendChild(productElement);
+        }
+
+        // Manejar el envío del formulario
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('productName').value;
+            const sku = document.getElementById('productSku').value;
+            const stock = parseInt(document.getElementById('productStock').value, 10);
+
+            if (!db || !userId) {
+                console.error("Firebase o ID de usuario no están listos.");
+                return;
+            }
+
+            try {
+                const productsRef = collection(db, `/artifacts/${appId}/users/${userId}/products`);
+                await addDoc(productsRef, {
+                    name: name,
+                    sku: sku,
+                    stock: stock,
+                    createdAt: new Date()
+                });
+
+                // Limpiar el formulario
+                productForm.reset();
+            } catch (error) {
+                console.error("Error al añadir el producto:", error);
+            }
+        });
+
+        // Manejar los botones de incremento/decremento
+        productList.addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const { id, action } = button.dataset;
+            if (!id || !action) return;
+
+            if (!db || !userId) {
+                console.error("Firebase o ID de usuario no están listos.");
+                return;
+            }
+            
+            try {
+                const productDocRef = doc(db, `/artifacts/${appId}/users/${userId}/products`, id);
+                
+                let stockChange = (action === 'increment') ? 1 : -1;
+                
+                // Actualizar el documento en Firestore
+                await updateDoc(productDocRef, {
+                    stock: increment(stockChange),
+                });
+
+            } catch (error) {
+                console.error("Error al actualizar el stock:", error);
+            }
+        });
+
+        // Iniciar la aplicación
+        initializeFirebase();
+
+    </script>
+</body>
+</html>
