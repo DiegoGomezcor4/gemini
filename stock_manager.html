@@ -243,6 +243,7 @@
                     <p class="font-bold text-gray-900 text-2xl">Stock: ${product.stock}</p>
                     <button data-id="${product.id}" data-action="decrement" class="px-3 py-1 bg-red-500 text-white rounded-md shadow-sm hover:bg-red-600 transition duration-200">-</button>
                     <button data-id="${product.id}" data-action="increment" class="px-3 py-1 bg-green-500 text-white rounded-md shadow-sm hover:bg-green-600 transition duration-200">+</button>
+                    <button data-id="${product.id}" data-action="delete" class="px-3 py-1 bg-red-800 text-white rounded-md shadow-sm hover:bg-red-900 transition duration-200">Eliminar</button>
                 </div>
             `;
             productList.appendChild(productElement);
@@ -276,7 +277,7 @@
             }
         });
 
-        // Manejar los botones de incremento/decremento
+        // Manejar los botones de incremento/decremento y eliminación
         productList.addEventListener('click', async (e) => {
             const button = e.target.closest('button');
             if (!button) return;
@@ -292,15 +293,19 @@
             try {
                 const productDocRef = doc(db, `/artifacts/${appId}/users/${userId}/products`, id);
                 
-                let stockChange = (action === 'increment') ? 1 : -1;
-                
-                // Actualizar el documento en Firestore
-                await updateDoc(productDocRef, {
-                    stock: increment(stockChange),
-                });
+                if (action === 'delete') {
+                    // Lógica para eliminar el producto
+                    await deleteDoc(productDocRef);
+                } else {
+                    // Lógica para actualizar el stock
+                    let stockChange = (action === 'increment') ? 1 : -1;
+                    await updateDoc(productDocRef, {
+                        stock: increment(stockChange),
+                    });
+                }
 
             } catch (error) {
-                console.error("Error al actualizar el stock:", error);
+                console.error("Error al interactuar con el stock:", error);
             }
         });
 
