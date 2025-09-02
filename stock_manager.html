@@ -240,8 +240,10 @@
                     noProductsMessage.classList.remove('hidden');
                 }
             }, (error) => {
-                console.error("Error al escuchar los cambios en Firestore:", error);
-                // Aquí puedes mostrar un mensaje de error al usuario
+                 // No mostrar errores para colecciones no existentes, que es un comportamiento esperado para nuevos usuarios.
+                if (error.code !== 'permission-denied') {
+                    console.error("Error al escuchar los cambios en Firestore:", error);
+                }
             });
         }
 
@@ -309,6 +311,11 @@
                 const productDocRef = doc(db, `/artifacts/${appId}/users/${userId}/products`, id);
                 
                 if (action === 'delete') {
+                    // Deshabilitar los botones inmediatamente para evitar clicks accidentales
+                    const productElement = button.closest('.bg-white');
+                    const stockButtons = productElement.querySelectorAll('[data-action="increment"], [data-action="decrement"], [data-action="delete"]');
+                    stockButtons.forEach(btn => btn.disabled = true);
+                    
                     // Lógica para eliminar el producto
                     await deleteDoc(productDocRef);
                 } else {
@@ -330,5 +337,6 @@
     </script>
 </body>
 </html>
+
 
 
